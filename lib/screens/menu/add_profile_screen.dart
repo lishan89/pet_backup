@@ -8,7 +8,7 @@ import 'package:flutter_app/models/Disposition.dart';
 import 'dart:convert';
 import 'package:flutter_app/api/api.dart';
 import 'package:flutter_app/screens/home/home_screen.dart';
-import 'package:flutter_web_image_picker/flutter_web_image_picker.dart';
+import 'package:image_picker_web/image_picker_web.dart';
 import 'dart:io';
 
 
@@ -40,7 +40,7 @@ class AddProfilePageState extends State<AddProfilePage> {
   bool goodWithChild = true;
   bool leashed = true;
   bool isSaving=false; // for double click
-  Image _image;
+  Uint8List _imageBytesFromPicker
   // Friend _selectedFriend = null;
   
   Future<String> fetchBreeds() async {
@@ -199,18 +199,18 @@ class AddProfilePageState extends State<AddProfilePage> {
                 Center(
                   child: GestureDetector(
                     onTap: () async {
-                      final img = await FlutterWebImagePicker.getImage;
+                      final img = await ImagePickerWeb.getImage(outputType: ImageType.bytes);
                         setState(() {
-                          _image = img;
+                          _imageBytesFromPicker = img;
                         });;
                     },
                     child: CircleAvatar(
                       radius: 55,
                       backgroundColor: Color(0xffFDCF09),
-                      child: _image != null
+                      child: _imageBytesFromPicker != null
                           ? ClipRRect(
                               borderRadius: BorderRadius.circular(50),
-                              child: _image,
+                              child: new Image.memory(_imageBytesFromPicker),
                             )
                           : Container(
                               decoration: BoxDecoration(
@@ -454,6 +454,21 @@ class AddProfilePageState extends State<AddProfilePage> {
 
             if(responseMap['status'].compareTo("success") == 0)
             {
+              Map imgData = {
+                "picUrl":BASE64.encode(_imageBytesFromPicker),
+                "profileID":responseMap['profileID']
+              }
+              final  responseImg = await http.post(
+                  PICTURE_ADD,
+                  headers: {
+                    "Accept": "application/json",
+                    "Authorization": "Bearer " + preferences.getString('token')
+                  },
+                  body: imgData,
+                  //encoding: Encoding.getByName("utf-8")
+              );
+              
+
               
               Scaffold.of(context).showSnackBar(SnackBar(content: Text('Create successful')));
               Future.delayed(const Duration(milliseconds: 500), () {

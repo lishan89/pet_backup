@@ -5,4 +5,5 @@ const String LOGIN="$ROOT/oauth/token";
 const String CURRENT="$ROOT/current";
 const String BREEDS="$ROOT/breeds";
 const String PROFILE_ADD="$ROOT/profile/add";
+const String PICTURE_ADD="$ROOT/picture/add";
 const String PROFILES="$ROOT/profiles";
