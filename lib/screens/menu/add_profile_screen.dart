@@ -10,7 +10,7 @@ import 'package:flutter_app/api/api.dart';
 import 'package:flutter_app/screens/home/home_screen.dart';
 import 'package:image_picker_web/image_picker_web.dart';
 import 'dart:io';
-
+import 'dart:typed_data';
 
 class AddProfilePage extends StatefulWidget {
   // List<Friend> friends;
@@ -40,7 +40,7 @@ class AddProfilePageState extends State<AddProfilePage> {
   bool goodWithChild = true;
   bool leashed = true;
   bool isSaving=false; // for double click
-  Uint8List _imageBytesFromPicker
+  Uint8List _imageBytesFromPicker;
   // Friend _selectedFriend = null;
   
   Future<String> fetchBreeds() async {
@@ -455,9 +455,10 @@ class AddProfilePageState extends State<AddProfilePage> {
             if(responseMap['status'].compareTo("success") == 0)
             {
               Map imgData = {
-                "picUrl":BASE64.encode(_imageBytesFromPicker),
-                "profileID":responseMap['profileID']
-              }
+                "picUrl":base64.encode(_imageBytesFromPicker),
+                "profileID":responseMap['profileID'].toString()
+              };
+
               final  responseImg = await http.post(
                   PICTURE_ADD,
                   headers: {
@@ -467,7 +468,7 @@ class AddProfilePageState extends State<AddProfilePage> {
                   body: imgData,
                   //encoding: Encoding.getByName("utf-8")
               );
-              
+
 
               
               Scaffold.of(context).showSnackBar(SnackBar(content: Text('Create successful')));
