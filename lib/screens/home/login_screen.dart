@@ -3,6 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_app/constants.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:flutter_app/screens/home/home_screen.dart';
+import 'package:flutter_app/screens/home/signup_user_screen.dart';
+import 'package:flutter_app/screens/home/signup_shelter_screen.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_app/api/api.dart';
+import 'dart:convert';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -11,6 +17,11 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   bool _rememberMe = false;
+  String email, password;
+  TextEditingController _emailController=new TextEditingController();
+  TextEditingController _passwordController=new TextEditingController();
+  bool isLoading=false; // for double click
+  GlobalKey<ScaffoldState>_scaffoldKey=GlobalKey();
 
   Widget _buildEmailTF() {
     return Column(
@@ -31,6 +42,7 @@ class _LoginScreenState extends State<LoginScreen> {
               color: Colors.white,
               fontFamily: 'OpenSans',
             ),
+            controller: _emailController,
             decoration: InputDecoration(
               border: InputBorder.none,
               contentPadding: EdgeInsets.only(top: 14.0),
@@ -66,6 +78,7 @@ class _LoginScreenState extends State<LoginScreen> {
               color: Colors.white,
               fontFamily: 'OpenSans',
             ),
+            controller: _passwordController,
             decoration: InputDecoration(
               border: InputBorder.none,
               contentPadding: EdgeInsets.only(top: 14.0),
@@ -135,11 +148,15 @@ class _LoginScreenState extends State<LoginScreen> {
           // ...
           // Then close the drawer
           // print('Login Button Pressed');
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => HomeScreen(),
-            ),
-          );
+          if(isLoading)
+          {
+            return;
+          }
+          login(_emailController.text,_passwordController.text);
+          setState(() {
+            isLoading=true;
+          });
+          
         },
         padding: EdgeInsets.all(15.0),
         shape: RoundedRectangleBorder(
@@ -172,7 +189,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         SizedBox(height: 20.0),
         Text(
-          'Sign in with',
+          'Join us as',
           style: kLabelStyle,
         ),
       ],
@@ -209,18 +226,57 @@ class _LoginScreenState extends State<LoginScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: <Widget>[
-          _buildSocialBtn(
-                () => print('Login with Google'),
-            AssetImage(
-              'assets/icons/google.jpg',
-            ),
-          ),
-          _buildSocialBtn(
-                () => print('Login with FB'),
-            AssetImage(
-              'assets/icons/facebook.jpg',
-            ),
-          ),
+          Expanded(
+                      child: RaisedButton(
+                        padding: EdgeInsets.all(15.0),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30.0),
+                        ),
+                        color: Colors.white,
+                        child: Text(
+                          "USER",
+                          style: TextStyle(
+                          color: Color(0xFF527DAA),
+                          letterSpacing: 1.5,
+                          fontSize: 18.0,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'OpenSans',
+                          ),
+                        ),
+                        onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => SignupUserScreen(),
+              ),
+            )
+                      ),
+                      flex: 2,
+                    ),
+          Spacer(),
+          Expanded(
+                      child: RaisedButton(
+                        padding: EdgeInsets.all(15.0),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30.0),
+                        ),
+                        color: Colors.white,
+                        child: Text(
+                          "SHELTER",
+                          style: TextStyle(
+                          color: Color(0xFF527DAA),
+                          letterSpacing: 1.5,
+                          fontSize: 18.0,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'OpenSans',
+                          ),
+                        ),
+                        onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => SignupShelterScreen(),
+              ),
+            )
+                      ),
+                      flex: 2,
+                    ),
         ],
       ),
     );
@@ -254,9 +310,107 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  login(email,password) async
+  {
+    Map data = {
+      'grant_type': "password",
+      'username': email,
+      'password': password
+    };
+    print(data.toString());
+    final  response= await http.post(
+        LOGIN,
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/x-www-form-urlencoded",
+          "Authorization": "Basic YXBwOmFwcDEyMw=="
+        },
+        body: data,
+        //encoding: Encoding.getByName("utf-8")
+    );
+
+    if (response.statusCode == 200) {
+      Map<String,dynamic>responseMap=jsonDecode(response.body);
+      final  responseCurr = await http.get(
+        CURRENT,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + responseMap['access_token']
+        }
+       // encoding: Encoding.getByName("utf-8")
+      ) ;
+      setState(() {
+        isLoading=false;
+      });
+
+      if (responseCurr.statusCode == 200) {
+          Map<String,dynamic>currMap=jsonDecode(responseCurr.body);
+        print(currMap.toString());
+
+
+        if(currMap['status'].compareTo("success") == 0)
+        {
+          
+          savePref(currMap["data"]['isAdmin'],
+            currMap["data"]['isShelter'],
+            currMap["data"]['userID'],
+            currMap["data"]['email'],
+            currMap["data"]['firstName'],
+            currMap["data"]['lastName'],
+            currMap["data"]['zipCode'],
+            currMap["data"]['phoneNumber'],
+            currMap["data"]['shelterName'],
+            responseMap["access_token"]
+          );
+          Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => HomeScreen(),
+              ),
+            );
+        }else{
+          //print(" ${resposne['message']}");
+        }
+      
+
+      } else {
+        showInSnackBar("Login Error, Please try again!");
+      }
+    } else {
+      showInSnackBar("Login Error, Please try again!");
+      setState(() {
+        isLoading=false;
+      });
+    }
+
+  }
+  savePref(int isAdmin, int isShelter, int userID, String email, String firstName, String lastName, String zipCode, String phoneNumber, String shelterName, String token) async {
+    SharedPreferences preferences = await SharedPreferences.getInstance();
+      print('Login Button Pressed' + userID.toString() + email);
+      preferences.setInt("isAdmin", isAdmin);
+      preferences.setInt("isShelter", isShelter);
+      preferences.setInt("userID", userID);
+      preferences.setString("email", email);
+      preferences.setString("firstName", firstName);
+      preferences.setString("lastName", lastName);
+      preferences.setString("zipCode", zipCode);
+      preferences.setString("phoneNumber", phoneNumber);
+      preferences.setString("shelterName", shelterName);
+      preferences.setString("token", token);
+      preferences.commit();
+
+  }
+
+  void showInSnackBar(String value) {
+    print(value);
+    _scaffoldKey.currentState.showSnackBar(SnackBar(content:Text(value)));
+  }
+
+  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _scaffoldKey,
       body: AnnotatedRegion<SystemUiOverlayStyle>(
         value: SystemUiOverlayStyle.light,
         child: GestureDetector(

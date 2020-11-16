@@ -3,6 +3,8 @@ import 'package:flutter_svg/svg.dart';
 import 'package:flutter_app/screens/home/components/body.dart';
 import 'package:flutter_app/screens/menu/add_profile_screen.dart';
 import 'package:flutter_app/screens/menu/search_screen.dart';
+import 'package:flutter_app/screens/home/login_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreen extends StatelessWidget {
   // final _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -79,8 +81,14 @@ class SideMenu extends StatelessWidget {
           ),
           ListTile(
             title: Text('Log Out'),
-            onTap: () {
-              Navigator.of(context).pop();
+            onTap: () async {
+                SharedPreferences preferences = await SharedPreferences.getInstance();
+                preferences.clear();
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => LoginScreen(),
+                  ),
+                );
             },
           ),
         ],

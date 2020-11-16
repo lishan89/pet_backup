@@ -2,12 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter_app/constants.dart';
 import 'package:flutter_app/screens/home/home_screen.dart';
 import 'package:flutter_app/screens/home/login_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   runApp(MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
+  @override
+  _MyAppState createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+
+  var _loginStatus=0;
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    getPref();
+  }
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
@@ -35,8 +49,15 @@ class MyApp extends StatelessWidget {
       ),
       // home: MyHomePage(title: 'Flutter Demo Page'),
       // home: HomeScreen(),
-      home: LoginScreen(),
+      home: (_loginStatus != null && _loginStatus > 0)?HomeScreen():LoginScreen(),
 
     );
+  }
+
+  getPref() async {
+    SharedPreferences preferences = await SharedPreferences.getInstance();
+    setState(() {
+      _loginStatus = preferences.getInt("userID");
+    });
   }
 }
